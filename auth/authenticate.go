@@ -15,10 +15,13 @@ import (
 
 const authURL = "https://api.robinhood.com/api-token-auth/"
 
+type Token string
+
 // Credentials are the login credentials required to start a robinhood session
 type Credentials struct {
 	username, password string
 	mfaCode            *string
+	token              *Token
 }
 
 // NewCredentials returns a Credentials holding the given username and password
@@ -29,55 +32,66 @@ func NewCredentials(username, password string) *Credentials {
 	}
 }
 
-func (a *Credentials) addMultiFactorCode(code string) {
-	a.mfaCode = &code
+func (c *Credentials) addToken(t Token) {
+	if c.token != nil {
+		if err := RequestLogOut(c); err != nil {
+			fmt.Printf("failed to log out token for %s\n", c.username)
+		}
+	}
+
+	c.token = &t
 }
 
-func (a *Credentials) generatePostForm() io.Reader {
-	d := make(url.Values)
-	d.Add("username", a.username)
-	d.Add("password", a.password)
+func (c *Credentials) addMultiFactorCode(code string) {
+	c.mfaCode = &code
+}
 
-	if a.mfaCode != nil {
-		d.Add("mfa_code", *a.mfaCode)
+func (c *Credentials) generatePostForm() io.Reader {
+	d := make(url.Values)
+	d.Add("username", c.username)
+	d.Add("password", c.password)
+
+	if c.mfaCode != nil {
+		d.Add("mfa_code", *c.mfaCode)
 	}
 
 	return strings.NewReader(d.Encode())
 }
 
 type authResp struct {
-	T       *string  `json:"token"`
+	T       *Token   `json:"token"`
 	MFA     *bool    `json:"mfa_required"`
 	MFAType string   `json:"mfa_type"`
 	Errors  []string `json:"non_field_errors"`
 }
 
-// RequestToken uses a set of account Credentials to request an authorization token from
-// the Robinhood API. In the event that the Robinhood account has multi-factor authentication
-// activated, RequestToken will prompt for an MFA code.
-func RequestToken(creds *Credentials) (string, error) {
+// RequestLogIn uses the fields of a Credentials object to request log in
+// to a Robinhood account. Upon successful login, the creds will have a
+// token for a log in session on the Robinhood server.
+func RequestLogIn(creds *Credentials) error {
 	resp, err := requestAuthenticate(creds)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if resp.MFA != nil && *resp.MFA == true {
 		code, err := getMFACode(resp.MFAType)
 		if err != nil {
-			return "", err
+			return err
 		}
 		creds.addMultiFactorCode(code)
 		resp, err = requestAuthenticate(creds)
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
 
 	if resp.T != nil {
-		return *resp.T, nil
+		creds.addToken(*resp.T)
+		return nil
 	}
 
-	return "", errors.New("failed to retrieve auth token")
+	return errors.New("failed to retrieve auth token")
 }
 
 func requestAuthenticate(creds *Credentials) (*authResp, error) {
