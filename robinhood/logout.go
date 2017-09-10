@@ -1,4 +1,4 @@
-package auth
+package robinhood
 
 import "errors"
 import "net/http"

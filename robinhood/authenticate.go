@@ -1,4 +1,4 @@
-package auth
+package robinhood
 
 import (
 	"bufio"
@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-const authURL = "https://api.robinhood.com/api-token-auth/"
+var authURL = APIURL + "api-token-auth/"
 
 type Token string
 
@@ -46,7 +46,7 @@ func (c *Credentials) addMultiFactorCode(code string) {
 	c.mfaCode = &code
 }
 
-func (c *Credentials) generatePostForm() io.Reader {
+func (c *Credentials) generateAuthPostForm() io.Reader {
 	d := make(url.Values)
 	d.Add("username", c.username)
 	d.Add("password", c.password)
@@ -95,7 +95,7 @@ func RequestLogIn(creds *Credentials) error {
 }
 
 func requestAuthenticate(creds *Credentials) (*authResp, error) {
-	req, err := http.NewRequest("POST", authURL, creds.generatePostForm())
+	req, err := http.NewRequest("POST", authURL, creds.generateAuthPostForm())
 	if err != nil {
 		return nil, err
 	}

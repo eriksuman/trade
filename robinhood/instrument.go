@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-const InstrumentsURL = "https://api.robinhood.com/instruments/"
+const instrumentsURL = "https://api.robinhood.com/instruments/"
 
 // Instrument holds basic information about a financial instrument.
 type Instrument struct {
@@ -34,7 +34,7 @@ type instrumentResponse struct {
 // AllInstruments request a list of all available instruments from the Robinhood API
 func AllInstruments() ([]Instrument, error) {
 	var instruments []Instrument
-	url := InstrumentsURL
+	url := instrumentsURL
 	for {
 		ir, err := getInstruments(url)
 		if err != nil {
@@ -56,7 +56,7 @@ func AllInstruments() ([]Instrument, error) {
 
 // InstrumentWithID requests a financial instrument with an instrument ID from the Robinhood API.
 func InstrumentWithID(id string) (*Instrument, error) {
-	url := InstrumentsURL + id + "/"
+	url := instrumentsURL + id + "/"
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -82,7 +82,7 @@ func InstrumentWithID(id string) (*Instrument, error) {
 
 // InstrumentWithSymbol requests the financial instrument with a ticker symbol from the Robinhood API
 func InstrumentWithSymbol(s string) (*Instrument, error) {
-	url := InstrumentsURL + fmt.Sprintf("?symbol=%s", s)
+	url := instrumentsURL + fmt.Sprintf("?symbol=%s", s)
 
 	for {
 		ir, err := getInstruments(url)
